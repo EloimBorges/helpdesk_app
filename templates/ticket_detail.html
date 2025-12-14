@@ -72,29 +72,86 @@
   <div class="card-body">
     <h3 class="h6 mb-3">Comentarios</h3>
 
-    {% if comments|length == 0 %}
-      <p class="text-muted mb-0">No hay comentarios todavía.</p>
-    {% else %}
-      <div class="list-group mb-3">
-        {% for c in comments %}
-          <div class="list-group-item">
-            <div class="d-flex justify-content-between">
-              <strong>{{ c.user_name }}</strong>
-              <small class="text-muted">{{ c.created_at }}</small>
+    <div id="commentsArea">
+      {% if comments|length == 0 %}
+        <p class="text-muted mb-0" id="noCommentsText">No hay comentarios todavía.</p>
+      {% else %}
+        <div class="list-group mb-3" id="commentsList">
+          {% for c in comments %}
+            <div class="list-group-item">
+              <div class="d-flex justify-content-between">
+                <strong>{{ c.user_name }}</strong>
+                <small class="text-muted">{{ c.created_at }}</small>
+              </div>
+              <div>{{ c.comment }}</div>
             </div>
-            <div>{{ c.comment }}</div>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
 
-    <form method="post" action="/tickets/{{ ticket.id }}/comments">
+    <form id="commentForm">
       <div class="mb-2">
         <label class="form-label">Añadir comentario</label>
-        <textarea class="form-control" name="comment" required rows="3"></textarea>
+        <textarea class="form-control" id="commentText" name="comment" required rows="3"></textarea>
       </div>
+
       <button class="btn btn-outline-primary" type="submit">Enviar comentario</button>
+      <span class="ms-2 text-muted" id="commentStatus"></span>
     </form>
   </div>
 </div>
+
+<script>
+$(function () {
+  $("#commentForm").on("submit", function (e) {
+    e.preventDefault();
+
+    const text = $("#commentText").val().trim();
+    if (!text) return;
+
+    $("#commentStatus").text("Enviando...");
+
+    $.ajax({
+      url: "/api/tickets/{{ ticket.id }}/comments",
+      method: "POST",
+      contentType: "application/json",
+      data: JSON.stringify({ comment: text }),
+      success: function (res) {
+        $("#noCommentsText").remove();
+
+        if ($("#commentsList").length === 0) {
+          $("#commentsArea").html('<div class="list-group mb-3" id="commentsList"></div>');
+        }
+
+        $("#commentsList").append(
+          `<div class="list-group-item">
+             <div class="d-flex justify-content-between">
+               <strong>${escapeHtml(res.user_name)}</strong>
+               <small class="text-muted">${escapeHtml(res.created_at)}</small>
+             </div>
+             <div>${escapeHtml(res.comment)}</div>
+           </div>`
+        );
+
+        $("#commentText").val("");
+        $("#commentStatus").text("✅ Comentario enviado");
+        setTimeout(() => $("#commentStatus").text(""), 1500);
+      },
+      error: function () {
+        $("#commentStatus").text("❌ Error enviando comentario");
+      }
+    });
+  });
+
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+});
+</script>
 {% endblock %}

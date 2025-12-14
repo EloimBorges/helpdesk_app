@@ -1,4 +1,4 @@
-from flask import Flask, request, abort, render_template, redirect, session, url_for
+from flask import Flask, request, abort, render_template, redirect, session, url_for, jsonify
 import pymysql
 from pymysql.cursors import DictCursor
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -82,11 +82,57 @@ def login():
 @app.get("/dashboard")
 @login_required
 def dashboard():
+    role = session.get("user_role")
+    user_id = session.get("user_id")
+
+    # Base: conteo por status
+    # Ajustamos el WHERE según rol
+    where = ""
+    params = []
+
+    if role == "USER":
+        where = "WHERE created_by = %s"
+        params = [user_id]
+    elif role == "AGENT":
+        # agente ve: asignados a él o sin asignar (igual que tu listado)
+        where = "WHERE (assigned_to = %s OR assigned_to IS NULL)"
+        params = [user_id]
+    else:
+        # ADMIN ve todo
+        where = ""
+        params = []
+
+    stats = {"total": 0, "OPEN": 0, "IN_PROGRESS": 0, "RESOLVED": 0}
+
+    conn = get_db_connection()
+    with conn.cursor() as cur:
+        # total
+        cur.execute(f"SELECT COUNT(*) AS c FROM tickets {where};", tuple(params))
+        stats["total"] = cur.fetchone()["c"]
+
+        # por status
+        cur.execute(
+            f"""
+            SELECT status, COUNT(*) AS c
+            FROM tickets
+            {where}
+            GROUP BY status;
+            """,
+            tuple(params)
+        )
+        rows = cur.fetchall()
+    conn.close()
+
+    for r in rows:
+        stats[r["status"]] = r["c"]
+
     return render_template(
         "dashboard.html",
         user_name=session.get("user_name"),
-        user_role=session.get("user_role")
+        user_role=role,
+        stats=stats
     )
+
 
 @app.get("/admin-only")
 @role_required("ADMIN")
@@ -216,37 +262,47 @@ def ticket_detail(ticket_id):
             user_role=role,
             agents=agents)
 
-@app.post("/tickets/<int:ticket_id>/comments")
+@app.post("/api/tickets/<int:ticket_id>/comments")
 @login_required
-def add_comment(ticket_id):
-    comment = request.form.get("comment", "").strip()
+def api_add_comment(ticket_id):
+    data = request.get_json(silent=True) or {}
+    comment = (data.get("comment") or "").strip()
+
     if not comment:
-        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+        return jsonify({"error": "Comentario vacío"}), 400
 
     conn = get_db_connection()
     with conn.cursor() as cur:
-        # validar que ticket exista
+        # validar ticket exista
         cur.execute("SELECT id, created_by FROM tickets WHERE id=%s", (ticket_id,))
         ticket = cur.fetchone()
         if not ticket:
             conn.close()
-            abort(404)
+            return jsonify({"error": "Ticket no existe"}), 404
 
-        # USER solo comenta en los suyos (regla básica)
+        # USER solo comenta en los suyos
         if session.get("user_role") == "USER" and ticket["created_by"] != session["user_id"]:
             conn.close()
-            abort(403)
+            return jsonify({"error": "No autorizado"}), 403
 
+        # insertar comentario
         cur.execute(
-            """
-            INSERT INTO ticket_comments (ticket_id, user_id, comment)
-            VALUES (%s, %s, %s)
-            """,
+            "INSERT INTO ticket_comments (ticket_id, user_id, comment) VALUES (%s, %s, %s)",
             (ticket_id, session["user_id"], comment)
         )
+
+        # devuelve info para pintar en UI
+        cur.execute("SELECT NOW() AS created_at;")
+        created_at = cur.fetchone()["created_at"]
+
     conn.close()
 
-    return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+    return jsonify({
+        "user_name": session.get("user_name"),
+        "created_at": str(created_at),
+        "comment": comment
+    }), 201
+
 
 @app.post("/tickets/<int:ticket_id>/update")
 @role_required("ADMIN", "AGENT")
