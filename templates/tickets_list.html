@@ -7,6 +7,53 @@
   <a class="btn btn-primary" href="/tickets/new">Crear ticket</a>
 </div>
 
+<!-- Filtros (GET) -->
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <form id="filtersForm" class="row g-2 align-items-end" method="get" action="/tickets">
+      <div class="col-12 col-md-6">
+        <label class="form-label">Buscar por título</label>
+        <input
+          id="searchInput"
+          class="form-control"
+          type="text"
+          name="q"
+          placeholder="Ej: impresora, email, login..."
+          value="{{ filters.q }}"
+        />
+      </div>
+
+      <div class="col-6 col-md-3">
+        <label class="form-label">Status</label>
+        <select id="statusSelect" class="form-select" name="status">
+          <option value="" {% if filters.status == "" %}selected{% endif %}>Todos</option>
+          <option value="OPEN" {% if filters.status == "OPEN" %}selected{% endif %}>OPEN</option>
+          <option value="IN_PROGRESS" {% if filters.status == "IN_PROGRESS" %}selected{% endif %}>IN_PROGRESS</option>
+          <option value="RESOLVED" {% if filters.status == "RESOLVED" %}selected{% endif %}>RESOLVED</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label">Prioridad</label>
+        <select id="prioritySelect" class="form-select" name="priority">
+          <option value="" {% if filters.priority == "" %}selected{% endif %}>Todas</option>
+          <option value="LOW" {% if filters.priority == "LOW" %}selected{% endif %}>LOW</option>
+          <option value="MEDIUM" {% if filters.priority == "MEDIUM" %}selected{% endif %}>MEDIUM</option>
+          <option value="HIGH" {% if filters.priority == "HIGH" %}selected{% endif %}>HIGH</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-1">
+        <a class="btn btn-outline-secondary w-100" href="/tickets">Reset</a>
+      </div>
+    </form>
+
+    <small class="text-muted d-block mt-2">
+      * Los resultados se actualizan automáticamente al cambiar filtros o escribir.
+    </small>
+  </div>
+</div>
+
 <div class="card shadow-sm">
   <div class="card-body p-0">
     <div class="table-responsive">
@@ -27,9 +74,7 @@
           <tr>
             <td>{{ t.id }}</td>
             <td>{{ t.title }}</td>
-            <td>
-              <span class="badge text-bg-secondary">{{ t.status }}</span>
-            </td>
+            <td><span class="badge text-bg-secondary">{{ t.status }}</span></td>
             <td>
               {% if t.priority == "HIGH" %}
                 <span class="badge text-bg-danger">HIGH</span>
@@ -47,7 +92,9 @@
 
           {% if tickets|length == 0 %}
           <tr>
-            <td colspan="7" class="text-center py-4 text-muted">No hay tickets.</td>
+            <td colspan="7" class="text-center py-4 text-muted">
+              No hay tickets que coincidan con los filtros.
+            </td>
           </tr>
           {% endif %}
         </tbody>
@@ -55,4 +102,22 @@
     </div>
   </div>
 </div>
+
+<script>
+$(function () {
+  const $form = $("#filtersForm");
+  let typingTimer;
+
+  $("#statusSelect, #prioritySelect").on("change", function () {
+    $form.submit();
+  });
+
+  $("#searchInput").on("keyup", function () {
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(function () {
+      $form.submit();
+    }, 400);
+  });
+});
+</script>
 {% endblock %}
