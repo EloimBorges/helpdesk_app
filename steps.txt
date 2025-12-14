@@ -1,0 +1,12 @@
+Crear el folder general de helpdesk
+Crear estructura base segun lo encontrado en los docs
+Instalar maria db
+Añadir maria db a los path en windows
+Crear db en mariadb
+Crear las 3 tablas (ticket_comments,tickets,users)
+Creamos usuario eborges con contraseña
+Otorgamos privilegios
+Guardamos info en .env
+Verificamos dependencias como flask etc 
+Crearemos un admin con hash desde flask
+Esta ruta sera protegida para no ser explotada luego en uso "Real/Producción"
