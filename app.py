@@ -82,35 +82,44 @@ def login():
 @app.get("/dashboard")
 @login_required
 def dashboard():
-    role = session.get("user_role")
+    role = (session.get("user_role") or "").upper()
     user_id = session.get("user_id")
 
-    # Base: conteo por status
-    # Ajustamos el WHERE según rol
-    where = ""
+    # Fail-safe: por defecto todo en 0
+    stats = {"total": 0, "OPEN": 0, "IN_PROGRESS": 0, "RESOLVED": 0}
+
+    # Decide scope según rol
+    where = None
     params = []
 
-    if role == "USER":
+    if role == "ADMIN":
+        where = ""          # sin filtro
+        params = []
+    elif role == "USER":
         where = "WHERE created_by = %s"
         params = [user_id]
     elif role == "AGENT":
-        # agente ve: asignados a él o sin asignar (igual que tu listado)
         where = "WHERE (assigned_to = %s OR assigned_to IS NULL)"
         params = [user_id]
+    elif role == "INACTIVE":
+        where = "WHERE assigned_to = %s AND status = 'RESOLVED'"
+        params = [user_id]
     else:
-        # ADMIN ve todo
-        where = ""
-        params = []
-
-    stats = {"total": 0, "OPEN": 0, "IN_PROGRESS": 0, "RESOLVED": 0}
+        # rol desconocido -> dashboard vacío (stats ya está en 0)
+        return render_template(
+            "dashboard.html",
+            user_name=session.get("user_name"),
+            user_role=role or "UNKNOWN",
+            stats=stats
+        )
 
     conn = get_db_connection()
     with conn.cursor() as cur:
-        # total
+        # Total
         cur.execute(f"SELECT COUNT(*) AS c FROM tickets {where};", tuple(params))
         stats["total"] = cur.fetchone()["c"]
 
-        # por status
+        # Por status
         cur.execute(
             f"""
             SELECT status, COUNT(*) AS c
@@ -124,7 +133,8 @@ def dashboard():
     conn.close()
 
     for r in rows:
-        stats[r["status"]] = r["c"]
+        if r["status"] in stats:
+            stats[r["status"]] = r["c"]
 
     return render_template(
         "dashboard.html",
@@ -145,6 +155,22 @@ def tickets_list():
     user_id = session["user_id"]
     role = session.get("user_role")
 
+    q = (request.args.get("q") or "").strip()
+    status = (request.args.get("status") or "").strip().upper()
+    priority = (request.args.get("priority") or "").strip().upper()
+
+    allowed_status = {"", "OPEN", "IN_PROGRESS", "RESOLVED"}
+    allowed_priority = {"", "LOW", "MEDIUM", "HIGH"}
+
+    if status not in allowed_status:
+        status = ""
+    if priority not in allowed_priority:
+        priority = ""
+
+    # INACTIVE: forzar solo RESOLVED
+    if role == "INACTIVE":
+        status = "RESOLVED"
+
     base_sql = """
         SELECT
           t.id, t.title, t.status, t.priority, t.created_at,
@@ -153,20 +179,44 @@ def tickets_list():
         LEFT JOIN users u2 ON t.assigned_to = u2.id
     """
 
+    where_clauses = []
     params = []
-    where = ""
 
+    # Filtro por rol (siempre)
     if role == "USER":
-        where = " WHERE t.created_by = %s "
+        where_clauses.append("t.created_by = %s")
         params.append(user_id)
     elif role == "AGENT":
-        where = " WHERE (t.assigned_to = %s OR t.assigned_to IS NULL) "
+        where_clauses.append("(t.assigned_to = %s OR t.assigned_to IS NULL)")
         params.append(user_id)
+    elif role == "INACTIVE":
+        where_clauses.append("t.assigned_to = %s")
+        params.append(user_id)
+        where_clauses.append("t.status = 'RESOLVED'")
     else:
         # ADMIN ve todo
-        where = ""
+        pass
 
-    sql = base_sql + where + " ORDER BY t.created_at DESC;"
+    # Filtro por status (INACTIVE ya lo fija)
+    if status and role != "INACTIVE":
+        where_clauses.append("t.status = %s")
+        params.append(status)
+
+    # Prioridad
+    if priority:
+        where_clauses.append("t.priority = %s")
+        params.append(priority)
+
+    # Buscar por título
+    if q:
+        where_clauses.append("t.title LIKE %s")
+        params.append(f"%{q}%")
+
+    where_sql = ""
+    if where_clauses:
+        where_sql = " WHERE " + " AND ".join(where_clauses)
+
+    sql = base_sql + where_sql + " ORDER BY t.created_at DESC;"
 
     conn = get_db_connection()
     with conn.cursor() as cur:
@@ -178,12 +228,16 @@ def tickets_list():
         "tickets_list.html",
         tickets=tickets,
         user_name=session.get("user_name"),
-        user_role=role
+        user_role=role,
+        filters={"q": q, "status": status, "priority": priority}
     )
 
 @app.route("/tickets/new", methods=["GET", "POST"])
 @login_required
 def ticket_new():
+    if session.get("user_role") == "INACTIVE":
+        abort(403)
+
     if request.method == "GET":
         return render_template("ticket_new.html", error=None)
 
@@ -232,11 +286,18 @@ def ticket_detail(ticket_id):
             conn.close()
             abort(404)
 
-        # Permisos básicos: USER solo ve los suyos
+        # USER solo ve los suyos
         if role == "USER" and ticket["created_by"] != user_id:
             conn.close()
             abort(403)
 
+        # INACTIVE: solo tickets RESOLVED asignados a él
+        if role == "INACTIVE":
+            if ticket.get("assigned_to") != user_id or ticket.get("status") != "RESOLVED":
+                conn.close()
+                abort(403)
+
+        # Comentarios
         cur.execute(
             """
             SELECT c.id, c.comment, c.created_at, u.name AS user_name
@@ -249,22 +310,30 @@ def ticket_detail(ticket_id):
         )
         comments = cur.fetchall()
 
+        # Dropdown agentes (solo admin/agent)
         agents = []
         if role in ("ADMIN", "AGENT"):
-            cur.execute("SELECT id, name, role FROM users WHERE role IN ('ADMIN','AGENT') ORDER BY name;")
+            cur.execute(
+                "SELECT id, name, role FROM users WHERE role IN ('ADMIN','AGENT') ORDER BY name;"
+            )
             agents = cur.fetchall()
+
     conn.close()
-   
+
     return render_template(
-            "ticket_detail.html",
-            ticket=ticket,
-            comments=comments,
-            user_role=role,
-            agents=agents)
+        "ticket_detail.html",
+        ticket=ticket,
+        comments=comments,
+        user_role=role,
+        agents=agents
+    )
 
 @app.post("/api/tickets/<int:ticket_id>/comments")
 @login_required
 def api_add_comment(ticket_id):
+    if session.get("user_role") == "INACTIVE":
+        return jsonify({"error": "No autorizado"}), 403
+
     data = request.get_json(silent=True) or {}
     comment = (data.get("comment") or "").strip()
 
@@ -273,25 +342,20 @@ def api_add_comment(ticket_id):
 
     conn = get_db_connection()
     with conn.cursor() as cur:
-        # validar ticket exista
         cur.execute("SELECT id, created_by FROM tickets WHERE id=%s", (ticket_id,))
         ticket = cur.fetchone()
         if not ticket:
             conn.close()
             return jsonify({"error": "Ticket no existe"}), 404
 
-        # USER solo comenta en los suyos
         if session.get("user_role") == "USER" and ticket["created_by"] != session["user_id"]:
             conn.close()
             return jsonify({"error": "No autorizado"}), 403
 
-        # insertar comentario
         cur.execute(
             "INSERT INTO ticket_comments (ticket_id, user_id, comment) VALUES (%s, %s, %s)",
             (ticket_id, session["user_id"], comment)
         )
-
-        # devuelve info para pintar en UI
         cur.execute("SELECT NOW() AS created_at;")
         created_at = cur.fetchone()["created_at"]
 
@@ -362,7 +426,7 @@ def users_list():
 def user_change_role(user_id):
     new_role = request.form.get("role", "").strip().upper()
 
-    if new_role not in ("USER", "AGENT", "ADMIN"):
+    if new_role not in ("USER", "AGENT", "ADMIN", "INACTIVE"):
         abort(400)
 
     # Evitar que el admin se quite el rol a sí mismo por accidente
@@ -381,7 +445,35 @@ def user_change_role(user_id):
 
     return redirect(url_for("users_list", msg="Rol actualizado ✅"))
 
+@app.post("/users/new")
+@role_required("ADMIN")
+def user_create():
+    name = (request.form.get("name") or "").strip()
+    email = (request.form.get("email") or "").strip().lower()
+    password = request.form.get("password") or ""
+    role = (request.form.get("role") or "USER").strip().upper()
 
+    allowed_roles = {"USER", "AGENT", "ADMIN", "INACTIVE"}
+    if not name or not email or not password or role not in allowed_roles:
+        return redirect(url_for("users_list", msg="Datos inválidos ❌"))
+
+    password_hash = generate_password_hash(password)
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM users WHERE email=%s", (email,))
+            if cur.fetchone():
+                return redirect(url_for("users_list", msg="Ese email ya existe ❌"))
+
+            cur.execute(
+                "INSERT INTO users (name, email, password_hash, role) VALUES (%s,%s,%s,%s)",
+                (name, email, password_hash, role)
+            )
+    finally:
+        conn.close()
+
+    return redirect(url_for("users_list", msg="Usuario creado ✅"))
 
 @app.get("/logout")
 def logout():

@@ -6,6 +6,43 @@
   <h1 class="h4 m-0">Administración de Usuarios</h1>
 </div>
 
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <h2 class="h6 mb-3">Crear nuevo usuario</h2>
+
+    <form class="row g-2" method="post" action="/users/new">
+      <div class="col-12 col-md-3">
+        <label class="form-label">Nombre</label>
+        <input class="form-control" type="text" name="name" required>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <label class="form-label">Email</label>
+        <input class="form-control" type="email" name="email" required>
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label">Password</label>
+        <input class="form-control" type="password" name="password" required>
+      </div>
+
+      <div class="col-12 col-md-2">
+        <label class="form-label">Rol</label>
+        <select class="form-select" name="role" required>
+          <option value="USER">USER</option>
+          <option value="AGENT">AGENT</option>
+          <option value="ADMIN">ADMIN</option>
+          <option value="INACTIVE">INACTIVE</option>
+        </select>
+      </div>
+
+      <div class="col-12">
+        <button class="btn btn-primary" type="submit">Crear usuario</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="card shadow-sm">
   <div class="card-body p-0">
     <div class="table-responsive">
@@ -16,7 +53,7 @@
             <th>Nombre</th>
             <th>Email</th>
             <th style="width:140px;">Rol</th>
-            <th style="width:260px;">Cambiar rol</th>
+            <th style="width:320px;">Cambiar rol</th>
           </tr>
         </thead>
         <tbody>
@@ -32,6 +69,7 @@
                   <option value="USER" {% if u.role=="USER" %}selected{% endif %}>USER</option>
                   <option value="AGENT" {% if u.role=="AGENT" %}selected{% endif %}>AGENT</option>
                   <option value="ADMIN" {% if u.role=="ADMIN" %}selected{% endif %}>ADMIN</option>
+                  <option value="INACTIVE" {% if u.role=="INACTIVE" %}selected{% endif %}>INACTIVE</option>
                 </select>
                 <button class="btn btn-primary" type="submit">Guardar</button>
               </form>

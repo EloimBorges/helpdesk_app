@@ -4,10 +4,12 @@
 {% block content %}
 <div class="d-flex align-items-center justify-content-between mb-3">
   <h1 class="h4 m-0">Tickets</h1>
-  <a class="btn btn-primary" href="/tickets/new">Crear ticket</a>
+
+  {% if session.get("user_role") != "INACTIVE" %}
+    <a class="btn btn-primary" href="/tickets/new">Crear ticket</a>
+  {% endif %}
 </div>
 
-<!-- Filtros (GET) -->
 <div class="card shadow-sm mb-3">
   <div class="card-body">
     <form id="filtersForm" class="row g-2 align-items-end" method="get" action="/tickets">
@@ -25,12 +27,15 @@
 
       <div class="col-6 col-md-3">
         <label class="form-label">Status</label>
-        <select id="statusSelect" class="form-select" name="status">
+        <select id="statusSelect" class="form-select" name="status" {% if session.get("user_role") == "INACTIVE" %}disabled{% endif %}>
           <option value="" {% if filters.status == "" %}selected{% endif %}>Todos</option>
           <option value="OPEN" {% if filters.status == "OPEN" %}selected{% endif %}>OPEN</option>
           <option value="IN_PROGRESS" {% if filters.status == "IN_PROGRESS" %}selected{% endif %}>IN_PROGRESS</option>
           <option value="RESOLVED" {% if filters.status == "RESOLVED" %}selected{% endif %}>RESOLVED</option>
         </select>
+        {% if session.get("user_role") == "INACTIVE" %}
+          <small class="text-muted">INACTIVE: solo RESOLVED</small>
+        {% endif %}
       </div>
 
       <div class="col-6 col-md-2">

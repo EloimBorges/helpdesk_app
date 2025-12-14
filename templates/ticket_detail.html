@@ -90,20 +90,27 @@
       {% endif %}
     </div>
 
-    <form id="commentForm">
-      <div class="mb-2">
-        <label class="form-label">Añadir comentario</label>
-        <textarea class="form-control" id="commentText" name="comment" required rows="3"></textarea>
-      </div>
+    {% if session.get("user_role") != "INACTIVE" %}
+      <form id="commentForm">
+        <div class="mb-2">
+          <label class="form-label">Añadir comentario</label>
+          <textarea class="form-control" id="commentText" name="comment" required rows="3"></textarea>
+        </div>
 
-      <button class="btn btn-outline-primary" type="submit">Enviar comentario</button>
-      <span class="ms-2 text-muted" id="commentStatus"></span>
-    </form>
+        <button class="btn btn-outline-primary" type="submit">Enviar comentario</button>
+        <span class="ms-2 text-muted" id="commentStatus"></span>
+      </form>
+    {% else %}
+      <p class="text-muted mb-0">Cuenta INACTIVE: solo lectura.</p>
+    {% endif %}
   </div>
 </div>
 
 <script>
 $(function () {
+  // Si es INACTIVE no existe commentForm, así que salimos
+  if ($("#commentForm").length === 0) return;
+
   $("#commentForm").on("submit", function (e) {
     e.preventDefault();
 
