@@ -1,9 +1,17 @@
+# Eborges2231
+# COMP2053
+
+
+
 from flask import Flask, request, abort, render_template, redirect, session, url_for, jsonify
 import pymysql
 from pymysql.cursors import DictCursor
 from werkzeug.security import generate_password_hash, check_password_hash
 from config import SECRET_KEY, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, ENV
 from auth import login_required, role_required
+
+
+
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
@@ -18,12 +26,16 @@ def get_db_connection():
         autocommit=True
     )
 
+
+
 @app.get("/")
 def index():
     # si ya está logueado, manda al dashboard
     if session.get("user_id"):
         return redirect(url_for("dashboard"))
     return redirect(url_for("login"))
+
+
 
 @app.route("/init-admin")
 def init_admin():
@@ -51,6 +63,8 @@ def init_admin():
 
     conn.close()
     return "Admin creado ✅"
+
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -85,7 +99,7 @@ def dashboard():
     role = (session.get("user_role") or "").upper()
     user_id = session.get("user_id")
 
-    # Fail-safe: por defecto todo en 0
+    # Fail-safe: por defecto en 0
     stats = {"total": 0, "OPEN": 0, "IN_PROGRESS": 0, "RESOLVED": 0}
 
     # Decide scope según rol
@@ -93,7 +107,7 @@ def dashboard():
     params = []
 
     if role == "ADMIN":
-        where = ""          # sin filtro
+        where = ""          
         params = []
     elif role == "USER":
         where = "WHERE created_by = %s"
@@ -105,7 +119,7 @@ def dashboard():
         where = "WHERE assigned_to = %s AND status = 'RESOLVED'"
         params = [user_id]
     else:
-        # rol desconocido -> dashboard vacío (stats ya está en 0)
+
         return render_template(
             "dashboard.html",
             user_name=session.get("user_name"),
@@ -144,10 +158,13 @@ def dashboard():
     )
 
 
+
 @app.get("/admin-only")
 @role_required("ADMIN")
 def admin_only():
     return "Solo ADMIN ✅"
+
+
 
 @app.get("/tickets")
 @login_required
@@ -232,6 +249,8 @@ def tickets_list():
         filters={"q": q, "status": status, "priority": priority}
     )
 
+
+
 @app.route("/tickets/new", methods=["GET", "POST"])
 @login_required
 def ticket_new():
@@ -262,6 +281,8 @@ def ticket_new():
     conn.close()
 
     return redirect(url_for("ticket_detail", ticket_id=new_id))
+
+
 
 @app.get("/tickets/<int:ticket_id>")
 @login_required
@@ -297,7 +318,6 @@ def ticket_detail(ticket_id):
                 conn.close()
                 abort(403)
 
-        # Comentarios
         cur.execute(
             """
             SELECT c.id, c.comment, c.created_at, u.name AS user_name
@@ -327,6 +347,8 @@ def ticket_detail(ticket_id):
         user_role=role,
         agents=agents
     )
+
+
 
 @app.post("/api/tickets/<int:ticket_id>/comments")
 @login_required
@@ -366,6 +388,7 @@ def api_add_comment(ticket_id):
         "created_at": str(created_at),
         "comment": comment
     }), 201
+
 
 
 @app.post("/tickets/<int:ticket_id>/update")
@@ -408,6 +431,8 @@ def ticket_update(ticket_id):
 
     return redirect(url_for("ticket_detail", ticket_id=ticket_id))
 
+
+
 @app.get("/users")
 @role_required("ADMIN")
 def users_list():
@@ -420,6 +445,8 @@ def users_list():
     conn.close()
 
     return render_template("users_list.html", users=users, msg=msg)
+
+
 
 @app.post("/users/<int:user_id>/role")
 @role_required("ADMIN")
@@ -444,6 +471,8 @@ def user_change_role(user_id):
     conn.close()
 
     return redirect(url_for("users_list", msg="Rol actualizado ✅"))
+
+
 
 @app.post("/users/new")
 @role_required("ADMIN")
@@ -475,10 +504,15 @@ def user_create():
 
     return redirect(url_for("users_list", msg="Usuario creado ✅"))
 
+
+
 @app.get("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+
+
 
 
 if __name__ == "__main__":
