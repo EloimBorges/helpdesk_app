@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Ticket #{{ ticket.id }} - HelpDesk{% endblock %}
 
+
+
 {% block content %}
 <div class="d-flex align-items-center justify-content-between mb-3">
   <h1 class="h4 m-0">Ticket #{{ ticket.id }}</h1>
@@ -108,7 +110,7 @@
 
 <script>
 $(function () {
-  // Si es INACTIVE no existe commentForm, así que salimos
+  // Si es INACTIVE no existe commentForm
   if ($("#commentForm").length === 0) return;
 
   $("#commentForm").on("submit", function (e) {

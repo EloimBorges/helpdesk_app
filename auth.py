@@ -1,6 +1,8 @@
 from functools import wraps
 from flask import session, redirect, url_for, abort, request
 
+
+
 def login_required(view_func):
     @wraps(view_func)
     def wrapper(*args, **kwargs):

@@ -17,3 +17,13 @@ pasamos todo a github mientras funciona
 hacemos verifique roles
 Pasamos a los ticket
 Añadimos funcionalidad de comments a tickets
+Implementar comentarios usando AJAX (jQuery) sin recargar la página
+Implementar listado de tickets filtrado según el rol del usuario
+Añadir filtros dinámicos en /tickets
+Implementar administración de usuarios desde /users (solo ADMIN)
+Permitir creación de usuarios desde la interfaz (password hasheado automáticamente)
+Añadir el nuevo rol INACTIVE
+Definir comportamiento del rol INACTIVE
+Actualizar el dashboard para reflejar estadísticas según el rol del usuario
+Implementar comportamiento fail-safe
+Ajustes de organizacion de codigo y github
