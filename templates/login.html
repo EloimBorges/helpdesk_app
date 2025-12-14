@@ -1,25 +1,28 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Login - HelpDesk</title>
-</head>
-<body>
-  <h1>HelpDesk - Iniciar sesión</h1>
+{% extends "base.html" %}
+{% block title %}Login - HelpDesk{% endblock %}
 
-  {% if error %}
-    <p style="color:red;">{{ error }}</p>
-  {% endif %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-6 col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3">Iniciar sesión</h1>
 
-  <form method="post" action="/login">
-    <label>Email</label><br/>
-    <input type="email" name="email" required /><br/><br/>
+        <form method="post" action="/login{% if request.args.get('next') %}?next={{ request.args.get('next') }}{% endif %}">
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input class="form-control" type="email" name="email" required>
+          </div>
 
-    <label>Contraseña</label><br/>
-    <input type="password" name="password" required /><br/><br/>
+          <div class="mb-3">
+            <label class="form-label">Contraseña</label>
+            <input class="form-control" type="password" name="password" required>
+          </div>
 
-    <button type="submit">Entrar</button>
-  </form>
-</body>
-</html>
+          <button class="btn btn-primary w-100" type="submit">Entrar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

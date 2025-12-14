@@ -10,3 +10,10 @@ Guardamos info en .env
 Verificamos dependencias como flask etc 
 Crearemos un admin con hash desde flask
 Esta ruta sera protegida para no ser explotada luego en uso "Real/Producción"
+Empezamos el dashboard
+Hacemos un log in
+creamos las distintas rutas para estas incluyendo logout
+pasamos todo a github mientras funciona
+hacemos verifique roles
+Pasamos a los ticket
+Añadimos funcionalidad de comments a tickets

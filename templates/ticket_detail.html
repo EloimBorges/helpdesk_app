@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Ticket #{{ ticket.id }} - HelpDesk{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h1 class="h4 m-0">Ticket #{{ ticket.id }}</h1>
+  <a class="btn btn-outline-secondary" href="/tickets">Volver</a>
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <h2 class="h5">{{ ticket.title }}</h2>
+
+    <div class="d-flex gap-2 flex-wrap mb-3">
+      <span class="badge text-bg-secondary">{{ ticket.status }}</span>
+
+      {% if ticket.priority == "HIGH" %}
+        <span class="badge text-bg-danger">HIGH</span>
+      {% elif ticket.priority == "MEDIUM" %}
+        <span class="badge text-bg-warning">MEDIUM</span>
+      {% else %}
+        <span class="badge text-bg-success">LOW</span>
+      {% endif %}
+
+      <span class="text-muted">Creado: {{ ticket.created_at }}</span>
+      <span class="text-muted">Asignado: {{ ticket.assigned_to_name or "-" }}</span>
+    </div>
+
+    <p class="mb-0"><strong>Descripción:</strong></p>
+    <p class="mb-0">{{ ticket.description }}</p>
+  </div>
+</div>
+
+{% if user_role in ["ADMIN", "AGENT"] %}
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <h3 class="h6">Actualizar Ticket</h3>
+
+    <form method="post" action="/tickets/{{ ticket.id }}/update">
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-4">
+          <label class="form-label">Status</label>
+          <select class="form-select" name="status" required>
+            <option value="OPEN" {% if ticket.status == "OPEN" %}selected{% endif %}>OPEN</option>
+            <option value="IN_PROGRESS" {% if ticket.status == "IN_PROGRESS" %}selected{% endif %}>IN_PROGRESS</option>
+            <option value="RESOLVED" {% if ticket.status == "RESOLVED" %}selected{% endif %}>RESOLVED</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-md-5">
+          <label class="form-label">Asignar a</label>
+          <select class="form-select" name="assigned_to">
+            <option value="">Sin asignar</option>
+            {% for a in agents %}
+              <option value="{{ a.id }}" {% if ticket.assigned_to == a.id %}selected{% endif %}>
+                {{ a.name }} ({{ a.role }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-12 col-md-3">
+          <button class="btn btn-primary w-100" type="submit">Guardar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h3 class="h6 mb-3">Comentarios</h3>
+
+    {% if comments|length == 0 %}
+      <p class="text-muted mb-0">No hay comentarios todavía.</p>
+    {% else %}
+      <div class="list-group mb-3">
+        {% for c in comments %}
+          <div class="list-group-item">
+            <div class="d-flex justify-content-between">
+              <strong>{{ c.user_name }}</strong>
+              <small class="text-muted">{{ c.created_at }}</small>
+            </div>
+            <div>{{ c.comment }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" action="/tickets/{{ ticket.id }}/comments">
+      <div class="mb-2">
+        <label class="form-label">Añadir comentario</label>
+        <textarea class="form-control" name="comment" required rows="3"></textarea>
+      </div>
+      <button class="btn btn-outline-primary" type="submit">Enviar comentario</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Nuevo Ticket - HelpDesk{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h1 class="h4 m-0">Crear Ticket</h1>
+  <a class="btn btn-outline-secondary" href="/tickets">Volver</a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" action="/tickets/new">
+      <div class="mb-3">
+        <label class="form-label">Título</label>
+        <input class="form-control" type="text" name="title" required maxlength="200">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Descripción</label>
+        <textarea class="form-control" name="description" required rows="6"></textarea>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Prioridad</label>
+        <select class="form-select" name="priority" required>
+          <option value="LOW">LOW</option>
+          <option value="MEDIUM" selected>MEDIUM</option>
+          <option value="HIGH">HIGH</option>
+        </select>
+      </div>
+
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-primary" type="submit">Crear</button>
+        <a class="btn btn-outline-secondary" href="/tickets">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,13 +1,22 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dashboard - HelpDesk</title>
-</head>
-<body>
-  <h1>Dashboard</h1>
-  <p>Bienvenido, {{ user_name }} ({{ user_role }})</p>
-  <a href="/logout">Cerrar sesión</a>
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Dashboard - HelpDesk{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h1 class="h4 m-0">Dashboard</h1>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <p class="mb-1"><strong>Usuario:</strong> {{ user_name }}</p>
+    <p class="mb-0"><strong>Rol:</strong> {{ user_role }}</p>
+  </div>
+</div>
+
+<div class="mt-3 d-flex gap-2 flex-wrap">
+  <a class="btn btn-outline-primary" href="/tickets">Ver Tickets</a>
+  {% if user_role == "ADMIN" %}
+    <a class="btn btn-outline-dark" href="/users">Administrar usuarios</a>
+  {% endif %}
+</div>
+{% endblock %}
