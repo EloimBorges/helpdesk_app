@@ -35,6 +35,15 @@ Si windows nos bloquea
      USE helpdesk_db;
      SOURCE schema.sql;
 
+     CREATE USER 'eborges'@'localhost'
+     IDENTIFIED BY 'R00572231';
+
+     GRANT ALL PRIVILEGES ON helpdesk_db.*
+     TO 'eborges'@'localhost';
+
+     FLUSH PRIVILEGES;
+
+
 6 Configuramos variables .env
 
 DB_HOST=localhost
@@ -42,6 +51,9 @@ DB_USER=eborges
 DB_PASSWORD=********
 DB_NAME=helpdesk_db
 SECRET_KEY=your_secret_key
+
+FLASK_ENV=development
+# FLASK_ENV=production
 
 7 Ejecutamos la App
 
